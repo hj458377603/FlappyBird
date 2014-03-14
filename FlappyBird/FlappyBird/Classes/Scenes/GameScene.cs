@@ -25,12 +25,10 @@ namespace FlappyBird.Classes.Scenes
         // 物理世界
         private b2World world = null;
 
-        // 游戏主角bird
+        // 物理世界中游戏主角bird
         private b2Body birdBody;
 
-        private CCSprite bird;
-
-        private CCLayer barContainer;
+        private CCLayer barLayer;
         #endregion
 
         #region 属性
@@ -46,11 +44,11 @@ namespace FlappyBird.Classes.Scenes
             world = new b2World(gravity);
             world.AllowSleep = false;
 
-            AddBarContainer();
+            AddBarLayer();
             AddBar(0.5f);
             AddGround();
             AddBird();
-            world.SetContactListener(new BirdContactListener(this, bird));
+            world.SetContactListener(new BirdContactListener(this, (CCSprite)(birdBody.UserData)));
             this.schedule(tick);
         }
 
@@ -69,7 +67,7 @@ namespace FlappyBird.Classes.Scenes
         /// </summary>
         private void AddBird()
         {
-            bird = CCSprite.spriteWithFile("imgs/bird/bird_01");
+            CCSprite bird = CCSprite.spriteWithFile("imgs/bird/bird_01");
 
             // bird飞行动作帧集合
             List<CCSpriteFrame> frames = new List<CCSpriteFrame>();
@@ -160,7 +158,7 @@ namespace FlappyBird.Classes.Scenes
             upBarBody.LinearVelocity = new b2Vec2(-3, 0);
             upBarBody.CreateFixture(boxShapeDef);
 
-            barContainer.addChild(upBar);
+            barLayer.addChild(upBar);
 
             // downBar
             CCSprite downBar = CCSprite.spriteWithFile("imgs/bar/down_bar");
@@ -178,15 +176,18 @@ namespace FlappyBird.Classes.Scenes
 
             downBarBody.LinearVelocity = new b2Vec2(-3, 0);
             downBarBody.CreateFixture(shapeDef);
-            barContainer.addChild(downBar);
+            barLayer.addChild(downBar);
 
             CCScheduler.sharedScheduler().scheduleSelector(AddBar, this, 2f, true);
         }
 
-        private void AddBarContainer()
+        /// <summary>
+        /// 添加
+        /// </summary>
+        private void AddBarLayer()
         {
-            barContainer = new CCLayer();
-            this.addChild(barContainer);
+            barLayer = new CCLayer();
+            this.addChild(barLayer);
         }
 
         /// <summary>
@@ -196,16 +197,29 @@ namespace FlappyBird.Classes.Scenes
         private void tick(float dt)
         {
             world.Step(dt, 10, 10);
+
             for (b2Body b = world.BodyList; b != null; b = b.Next)
             {
                 if (b.UserData != null)
                 {
-                    CCSprite ballData = (CCSprite)b.UserData;
-
-                    ballData.position = new CCPoint((float)(b.Position.x * PTM_RATIO),
+                    CCSprite sprite = (CCSprite)b.UserData;
+                    sprite.position = new CCPoint((float)(b.Position.x * PTM_RATIO),
                                                     (float)(b.Position.y * PTM_RATIO));
+                    sprite.rotation = -1 * MathHelper.ToDegrees(b.Angle);
 
-                    ballData.rotation = -1 * MathHelper.ToDegrees(b.Angle);
+                    // bird超出界面，游戏结束
+                    if (birdBody.UserData == sprite && sprite.position.x < 0)
+                    {
+                        CCDirector.sharedDirector().pause();
+                    }
+
+                    // 销毁不在屏幕中的对象
+                    if (b.Position.x < 0)
+                    {
+                        sprite.removeFromParentAndCleanup(true);
+                        world.DestroyBody(b);
+                    }
+
                 }
             }
         }
