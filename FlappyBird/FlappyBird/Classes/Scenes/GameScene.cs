@@ -46,7 +46,7 @@ namespace FlappyBird.Classes.Scenes
 
             AddBarLayer();
             AddBar(0.5f);
-            AddGround();
+            AddGround(0);
             AddBird();
             world.SetContactListener(new BirdContactListener(this, (CCSprite)(birdBody.UserData)));
             this.schedule(tick);
@@ -114,16 +114,37 @@ namespace FlappyBird.Classes.Scenes
         /// 第一步添加地面
         /// 第二步利用box-2d物理引擎将地面作为静态物体添加到物理世界中
         /// </summary>
-        private void AddGround()
+        private void AddGround(float interval)
         {
-            CCSprite ground = CCSprite.spriteWithFile("imgs/ground/ground");
+            CCSprite ground = CCSprite.spriteWithFile("imgs/ground/ground_01");
+
+            // 地面运动动作帧集合
+            List<CCSpriteFrame> frames = new List<CCSpriteFrame>();
+
+            for (int i = 1; i < 3; i++)
+            {
+                // 帧贴图
+                CCTexture2D texture = CCTextureCache.sharedTextureCache().addImage("imgs/ground/ground_0" + i);
+
+                // 这里存在一个引擎的bug，如果不设置的话，就会播放不出来动画
+                texture.Name = (uint)i;
+                var frame = CCSpriteFrame.frameWithTexture(texture, new CCRect(0, 0, texture.ContentSizeInPixels.width, texture.ContentSizeInPixels.height));
+                frames.Add(frame);
+            }
+
+            // 动画
+            CCAnimation marmotShowanimation = CCAnimation.animationWithFrames(frames, 0.15f);
+            CCAnimate flyAction = CCAnimate.actionWithAnimation(marmotShowanimation, false);
+            CCRepeatForever repeatAction = CCRepeatForever.actionWithAction(flyAction);
+            repeatAction.tag = 0;
+            ground.runAction(repeatAction);
+
             b2BodyDef groundBodyDef = new b2BodyDef();
             groundBodyDef.position = new b2Vec2(ground.contentSize.width / PTM_RATIO / 2, ground.contentSize.height / PTM_RATIO / 2);
             groundBodyDef.userData = ground;
-            groundBodyDef.type = b2BodyType.b2_staticBody;
+            groundBodyDef.type = b2BodyType.b2_kinematicBody;
 
             b2Body groundBody = world.CreateBody(groundBodyDef);
-
             b2PolygonShape groundBox = new b2PolygonShape();
             b2FixtureDef boxShapeDef = new b2FixtureDef();
             boxShapeDef.shape = groundBox;
