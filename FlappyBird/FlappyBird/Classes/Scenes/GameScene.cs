@@ -226,12 +226,14 @@ namespace FlappyBird.Classes.Scenes
 
         public override void onEnter()
         {
+            // 注册点击事件
             CCTouchDispatcher.sharedDispatcher().addTargetedDelegate(this, 0, true);
             base.onEnter();
         }
 
         public override void onExit()
         {
+            // 移除点击事件
             CCTouchDispatcher.sharedDispatcher().removeDelegate(this);
             base.onExit();
         }
