@@ -10,7 +10,7 @@ using System.Text;
 
 namespace FlappyBird.Classes.Scenes
 {
-    class GameScene : CCScene
+    class GameScene : CCScene, ICCTargetedTouchDelegate
     {
         #region 字段
 
@@ -25,7 +25,7 @@ namespace FlappyBird.Classes.Scenes
         private b2World world = null;
 
         // 游戏主角bird
-        private CCSprite bird;
+        private b2Body birdBody;
         #endregion
 
         #region 属性
@@ -62,7 +62,7 @@ namespace FlappyBird.Classes.Scenes
         /// </summary>
         private void AddBird()
         {
-            bird = CCSprite.spriteWithFile("imgs/bird/bird_01");
+            CCSprite bird = CCSprite.spriteWithFile("imgs/bird/bird_01");
 
             // bird飞行动作帧集合
             List<CCSpriteFrame> frames = new List<CCSpriteFrame>();
@@ -88,9 +88,9 @@ namespace FlappyBird.Classes.Scenes
             // 在物理世界中定义一个body，设置其位置，并让bird与之对应
             b2BodyDef ballBodyDef = new b2BodyDef();
             ballBodyDef.type = b2BodyType.b2_dynamicBody;
-            ballBodyDef.position = new b2Vec2(bird.contentSize.width / PTM_RATIO / 2, (float)(screenSize.height / PTM_RATIO));
+            ballBodyDef.position = new b2Vec2(screenSize.width / PTM_RATIO / 2, (float)(screenSize.height / PTM_RATIO));
             ballBodyDef.userData = bird;
-            var body = world.CreateBody(ballBodyDef);
+            birdBody = world.CreateBody(ballBodyDef);
 
             // 为body创建形状，并设置一些物理属性
             b2PolygonShape shape = new b2PolygonShape();
@@ -100,7 +100,7 @@ namespace FlappyBird.Classes.Scenes
             fixtureDef.density = 500.0f;
             fixtureDef.friction = 0.5f;
             fixtureDef.restitution = 0.1f;
-            body.CreateFixture(fixtureDef);
+            birdBody.CreateFixture(fixtureDef);
 
             this.addChild(bird);
         }
@@ -147,6 +147,39 @@ namespace FlappyBird.Classes.Scenes
                     ballData.rotation = -1 * MathHelper.ToDegrees(b.Angle);
                 }
             }
+        }
+
+        public override void onEnter()
+        {
+            CCTouchDispatcher.sharedDispatcher().addTargetedDelegate(this, 0, true);
+            base.onEnter();
+        }
+
+        public override void onExit()
+        {
+            CCTouchDispatcher.sharedDispatcher().removeDelegate(this);
+            base.onExit();
+        }
+
+        public bool ccTouchBegan(CCTouch pTouch, CCEvent pEvent)
+        {
+            birdBody.LinearVelocity = new b2Vec2(birdBody.LinearVelocity.x, 10);
+            return true;
+        }
+
+        public void ccTouchCancelled(CCTouch pTouch, CCEvent pEvent)
+        {
+            //throw new NotImplementedException();
+        }
+
+        public void ccTouchEnded(CCTouch pTouch, CCEvent pEvent)
+        {
+            //throw new NotImplementedException();
+        }
+
+        public void ccTouchMoved(CCTouch pTouch, CCEvent pEvent)
+        {
+            //throw new NotImplementedException();
         }
 
         #endregion
