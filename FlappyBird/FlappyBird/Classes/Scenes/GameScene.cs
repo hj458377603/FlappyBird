@@ -20,6 +20,7 @@ namespace FlappyBird.Classes.Scenes
 
         public GameScene()
         {
+            AddGround();
             AddBird();
         }
 
@@ -62,6 +63,16 @@ namespace FlappyBird.Classes.Scenes
             bird.runAction(repeatAction);
 
             this.addChild(bird);
+        }
+
+        /// <summary>
+        /// ÃÌº”µÿ√Ê
+        /// </summary>
+        private void AddGround()
+        {
+            CCSprite ground = CCSprite.spriteWithFile("imgs/ground/ground");
+            ground.position = new CCPoint(screenSize.width / 2, ground.contentSize.height / 2);
+            this.addChild(ground);
         }
 
         #endregion
