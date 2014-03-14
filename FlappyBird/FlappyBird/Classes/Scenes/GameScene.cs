@@ -106,15 +106,27 @@ namespace FlappyBird.Classes.Scenes
         }
 
         /// <summary>
-        /// 添加地面
+        /// 第一步添加地面
+        /// 第二步利用box-2d物理引擎将地面作为静态物体添加到物理世界中
         /// </summary>
         private void AddGround()
         {
             CCSprite ground = CCSprite.spriteWithFile("imgs/ground/ground");
-            ground.position = new CCPoint(screenSize.width / 2, ground.contentSize.height / 2);
+            b2BodyDef groundBodyDef = new b2BodyDef();
+            groundBodyDef.position = new b2Vec2(ground.contentSize.width / PTM_RATIO / 2, ground.contentSize.height / PTM_RATIO / 2);
+            groundBodyDef.userData = ground;
+            groundBodyDef.type = b2BodyType.b2_staticBody;
+
+            b2Body groundBody = world.CreateBody(groundBodyDef);
+
+            b2PolygonShape groundBox = new b2PolygonShape();
+            b2FixtureDef boxShapeDef = new b2FixtureDef();
+            boxShapeDef.shape = groundBox;
+            groundBox.SetAsBox(ground.contentSize.width / PTM_RATIO / 2, ground.contentSize.height / PTM_RATIO / 2);
+
+            groundBody.CreateFixture(boxShapeDef);
             this.addChild(ground);
         }
-
 
         /// <summary>
         /// 模拟物理世界
