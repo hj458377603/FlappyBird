@@ -2,6 +2,7 @@ using Box2D.Collision.Shapes;
 using Box2D.Common;
 using Box2D.Dynamics;
 using cocos2d;
+using FlappyBird.Classes.ContactListeners;
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,10 @@ namespace FlappyBird.Classes.Scenes
 
         // 游戏主角bird
         private b2Body birdBody;
+
+        private CCSprite bird;
+
+        private CCLayer barContainer;
         #endregion
 
         #region 属性
@@ -41,9 +46,11 @@ namespace FlappyBird.Classes.Scenes
             world = new b2World(gravity);
             world.AllowSleep = false;
 
+            AddBarContainer();
+            AddBar(0.5f);
             AddGround();
             AddBird();
-
+            world.SetContactListener(new BirdContactListener(this, bird));
             this.schedule(tick);
         }
 
@@ -62,7 +69,7 @@ namespace FlappyBird.Classes.Scenes
         /// </summary>
         private void AddBird()
         {
-            CCSprite bird = CCSprite.spriteWithFile("imgs/bird/bird_01");
+            bird = CCSprite.spriteWithFile("imgs/bird/bird_01");
 
             // bird飞行动作帧集合
             List<CCSpriteFrame> frames = new List<CCSpriteFrame>();
@@ -129,6 +136,60 @@ namespace FlappyBird.Classes.Scenes
         }
 
         /// <summary>
+        /// 添加遮挡障碍
+        /// </summary>
+        /// <param name="interval"></param>
+        private void AddBar(float interval)
+        {
+            int offset = new Random().Next(-160, 50);
+
+            // upBar
+            CCSprite upBar = CCSprite.spriteWithFile("imgs/bar/up_bar");
+            b2BodyDef upBarBodyDef = new b2BodyDef();
+            upBarBodyDef.position = new b2Vec2(screenSize.width / PTM_RATIO, (screenSize.height + offset + 80) / PTM_RATIO);
+            upBarBodyDef.userData = upBar;
+            upBarBodyDef.type = b2BodyType.b2_kinematicBody;
+
+            b2Body upBarBody = world.CreateBody(upBarBodyDef);
+
+            b2PolygonShape upBarBox = new b2PolygonShape();
+            b2FixtureDef boxShapeDef = new b2FixtureDef();
+            boxShapeDef.shape = upBarBox;
+            upBarBox.SetAsBox(upBar.contentSize.width / PTM_RATIO / 2, upBar.contentSize.height / PTM_RATIO / 2);
+
+            upBarBody.LinearVelocity = new b2Vec2(-3, 0);
+            upBarBody.CreateFixture(boxShapeDef);
+
+            barContainer.addChild(upBar);
+
+            // downBar
+            CCSprite downBar = CCSprite.spriteWithFile("imgs/bar/down_bar");
+            b2BodyDef downBarBodyDef = new b2BodyDef();
+            downBarBodyDef.position = new b2Vec2(screenSize.width / PTM_RATIO, (downBar.contentSize.height + offset * 2 - 80) / 2 / PTM_RATIO);
+            downBarBodyDef.userData = downBar;
+            downBarBodyDef.type = b2BodyType.b2_kinematicBody;
+
+            b2Body downBarBody = world.CreateBody(downBarBodyDef);
+
+            b2PolygonShape downBarBox = new b2PolygonShape();
+            b2FixtureDef shapeDef = new b2FixtureDef();
+            shapeDef.shape = downBarBox;
+            downBarBox.SetAsBox(downBar.contentSize.width / PTM_RATIO / 2, downBar.contentSize.height / PTM_RATIO / 2);
+
+            downBarBody.LinearVelocity = new b2Vec2(-3, 0);
+            downBarBody.CreateFixture(shapeDef);
+            barContainer.addChild(downBar);
+
+            CCScheduler.sharedScheduler().scheduleSelector(AddBar, this, 2f, true);
+        }
+
+        private void AddBarContainer()
+        {
+            barContainer = new CCLayer();
+            this.addChild(barContainer);
+        }
+
+        /// <summary>
         /// 模拟物理世界
         /// </summary>
         /// <param name="dt"></param>
@@ -163,7 +224,7 @@ namespace FlappyBird.Classes.Scenes
 
         public bool ccTouchBegan(CCTouch pTouch, CCEvent pEvent)
         {
-            birdBody.LinearVelocity = new b2Vec2(birdBody.LinearVelocity.x, 10);
+            birdBody.LinearVelocity = new b2Vec2(0, 10);
             return true;
         }
 

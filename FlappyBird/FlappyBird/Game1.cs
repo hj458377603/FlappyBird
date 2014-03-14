@@ -84,7 +84,8 @@ namespace FlappyBird
         {
             // 允许游戏退出
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
-                this.Exit();
+                //this.Exit();
+                CCDirector.sharedDirector().pause();
 
             // TODO: 在此处添加更新逻辑
 

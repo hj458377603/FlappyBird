@@ -77,6 +77,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Classes\AppDelegate.cs" />
+    <Compile Include="Classes\ContactListeners\BirdContactListener.cs" />
     <Compile Include="Classes\Scenes\GameScene.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <None Include="Properties\AppManifest.xml">
