@@ -57,9 +57,6 @@
     <Reference Include="cocos2d-xna">
       <HintPath>..\..\..\libs\cocos2d-xna.dll</HintPath>
     </Reference>
-    <Reference Include="cocos2d.Content.Pipeline.Importers">
-      <HintPath>..\..\..\libs\cocos2d.Content.Pipeline.Importers.dll</HintPath>
-    </Reference>
     <Reference Include="cocos2d.Framework">
       <HintPath>..\..\..\libs\cocos2d.Framework.dll</HintPath>
     </Reference>
