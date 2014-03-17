@@ -98,7 +98,7 @@ namespace FlappyBird
         /// <param name="gameTime">提供计时值的快照。</param>
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CadetBlue);
+            //GraphicsDevice.Clear(Color.CadetBlue);
 
             // TODO: 在此处添加绘图代码
 

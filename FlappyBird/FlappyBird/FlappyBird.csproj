@@ -87,7 +87,6 @@
     <Compile Include="Game1.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="bird_02.png" />
     <Content Include="Game.ico" />
     <Content Include="ico173.png" />
     <Content Include="ico62.png" />

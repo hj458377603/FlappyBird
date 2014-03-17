@@ -28,7 +28,17 @@ namespace FlappyBird.Classes.Scenes
         // 物理世界中游戏主角bird
         private b2Body birdBody;
 
+        // 障碍物层
         private CCLayer barLayer;
+
+        // 得分文本
+        private CCLabelTTF scoreLabel;
+
+        // 得分值
+        private int score = 0;
+
+        // 游戏主角bird是否还活着
+        private bool isBirdAlive = true;
         #endregion
 
         #region 属性
@@ -43,13 +53,15 @@ namespace FlappyBird.Classes.Scenes
             b2Vec2 gravity = new b2Vec2(0f, -20f);
             world = new b2World(gravity);
             world.AllowSleep = false;
-
+            InitBack();
             AddBarLayer();
             AddBar(0.5f);
             AddGround(0);
             AddBird();
             world.SetContactListener(new BirdContactListener(this, (CCSprite)(birdBody.UserData)));
             this.schedule(tick);
+
+            InitScore();
         }
 
         #endregion
@@ -61,6 +73,17 @@ namespace FlappyBird.Classes.Scenes
         #region 方法
 
         /// <summary>
+        /// 初始化背景图片
+        /// </summary>
+        private void InitBack()
+        {
+            CCSprite back = CCSprite.spriteWithFile("imgs/back/back");
+            back.anchorPoint = new CCPoint(0, 1);
+            back.position = new CCPoint(0, screenSize.height);
+            this.addChild(back);
+        }
+
+        /// <summary>
         /// 第一步在场景中添加一个静态的bird精灵
         /// 第二步让bird做飞行动作
         /// 第三步利用box-2d物理引擎让bird在物理世界中飞行
@@ -68,7 +91,7 @@ namespace FlappyBird.Classes.Scenes
         private void AddBird()
         {
             CCSprite bird = CCSprite.spriteWithFile("imgs/bird/bird_01");
-
+            bird.rotation = -15;
             // bird飞行动作帧集合
             List<CCSpriteFrame> frames = new List<CCSpriteFrame>();
 
@@ -117,27 +140,6 @@ namespace FlappyBird.Classes.Scenes
         private void AddGround(float interval)
         {
             CCSprite ground = CCSprite.spriteWithFile("imgs/ground/ground_01");
-
-            // 地面运动动作帧集合
-            List<CCSpriteFrame> frames = new List<CCSpriteFrame>();
-
-            for (int i = 1; i < 3; i++)
-            {
-                // 帧贴图
-                CCTexture2D texture = CCTextureCache.sharedTextureCache().addImage("imgs/ground/ground_0" + i);
-
-                // 这里存在一个引擎的bug，如果不设置的话，就会播放不出来动画
-                texture.Name = (uint)i;
-                var frame = CCSpriteFrame.frameWithTexture(texture, new CCRect(0, 0, texture.ContentSizeInPixels.width, texture.ContentSizeInPixels.height));
-                frames.Add(frame);
-            }
-
-            // 动画
-            CCAnimation marmotShowanimation = CCAnimation.animationWithFrames(frames, 0.15f);
-            CCAnimate flyAction = CCAnimate.actionWithAnimation(marmotShowanimation, false);
-            CCRepeatForever repeatAction = CCRepeatForever.actionWithAction(flyAction);
-            repeatAction.tag = 0;
-            ground.runAction(repeatAction);
 
             b2BodyDef groundBodyDef = new b2BodyDef();
             groundBodyDef.position = new b2Vec2(ground.contentSize.width / PTM_RATIO / 2, ground.contentSize.height / PTM_RATIO / 2);
@@ -199,7 +201,10 @@ namespace FlappyBird.Classes.Scenes
             downBarBody.CreateFixture(shapeDef);
             barLayer.addChild(downBar);
 
-            CCScheduler.sharedScheduler().scheduleSelector(AddBar, this, 2f, true);
+            if (scoreLabel != null)
+            {
+                scoreLabel.setString(score++.ToString());
+            }
         }
 
         /// <summary>
@@ -209,6 +214,21 @@ namespace FlappyBird.Classes.Scenes
         {
             barLayer = new CCLayer();
             this.addChild(barLayer);
+
+            CCScheduler.sharedScheduler().scheduleSelector(AddBar, this, 2f, true);
+        }
+
+        /// <summary>
+        /// 初始化得分
+        /// </summary>
+        private void InitScore()
+        {
+            scoreLabel = CCLabelTTF.labelWithString(score.ToString(), "Arial", 20);
+            scoreLabel.Color = new ccColor3B(Color.Red);
+            scoreLabel.position = new CCPoint(screenSize.width - 20, screenSize.height - 20);
+            CCLayer scoreLayer = new CCLayer();
+            scoreLayer.addChild(scoreLabel);
+            this.addChild(scoreLayer);
         }
 
         /// <summary>
@@ -226,16 +246,23 @@ namespace FlappyBird.Classes.Scenes
                     CCSprite sprite = (CCSprite)b.UserData;
                     sprite.position = new CCPoint((float)(b.Position.x * PTM_RATIO),
                                                     (float)(b.Position.y * PTM_RATIO));
-                    sprite.rotation = -1 * MathHelper.ToDegrees(b.Angle);
 
-                    // bird超出界面，游戏结束
-                    if (birdBody.UserData == sprite && sprite.position.x < 0)
+                    //sprite.rotation = -1 * MathHelper.ToDegrees(b.Angle);
+
+                    if (birdBody.UserData == sprite && sprite.rotation < 90)
                     {
-                        CCDirector.sharedDirector().pause();
+                        if (sprite.rotation < 0)
+                        {
+                            sprite.rotation += 1;
+                        }
+                        else
+                        {
+                            sprite.rotation += 5;
+                        }
                     }
 
                     // 销毁不在屏幕中的对象
-                    if (b.Position.x < 0)
+                    if (b.Position.x < -3)
                     {
                         sprite.removeFromParentAndCleanup(true);
                         world.DestroyBody(b);
@@ -261,7 +288,11 @@ namespace FlappyBird.Classes.Scenes
 
         public bool ccTouchBegan(CCTouch pTouch, CCEvent pEvent)
         {
-            birdBody.LinearVelocity = new b2Vec2(0, 10);
+            if (isBirdAlive)
+            {
+                birdBody.LinearVelocity = new b2Vec2(0, 10);
+                ((CCSprite)(birdBody.UserData)).rotation = -30;
+            }
             return true;
         }
 
@@ -280,6 +311,21 @@ namespace FlappyBird.Classes.Scenes
             //throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// 游戏结束
+        /// </summary>
+        public void GameOver()
+        {
+            isBirdAlive = false;
+            var bird = (CCSprite)birdBody.UserData;
+            CCMoveTo moveTo = CCMoveTo.actionWithDuration(0.5f, new CCPoint(bird.position.x, 120));
+            CCRotateTo rotateTo = CCRotateTo.actionWithDuration(0.1f, 90);
+            bird.runAction(moveTo);
+            bird.runAction(rotateTo);
+            bird.stopActionByTag(0);
+            CCScheduler.sharedScheduler().unscheduleSelector(AddBar, this);
+            this.unschedule(tick);
+        }
         #endregion
     }
 }
