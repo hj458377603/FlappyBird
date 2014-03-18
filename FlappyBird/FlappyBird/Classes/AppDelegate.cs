@@ -8,6 +8,8 @@ namespace WindowsPhoneGame2.Classes
     {
         private Game game;
 
+        public static CCSize screenSize;
+
         public AppDelegate(Game game, GraphicsDeviceManager graphics)
             : base(game, graphics)
         {
@@ -46,10 +48,12 @@ namespace WindowsPhoneGame2.Classes
             pDirector.animationInterval = 1.0 / 60;
 
             // create a scene. it's an autorelease object
-            CCScene pScene = new GameScene();
+            CCScene loadScene = new LoadingScene();
 
             //run
-            pDirector.runWithScene(pScene);
+            pDirector.runWithScene(loadScene);
+
+            screenSize = CCDirector.sharedDirector().getWinSize();
             return true;
         }
 

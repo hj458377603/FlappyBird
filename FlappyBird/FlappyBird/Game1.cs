@@ -11,6 +11,7 @@ using Microsoft.Xna.Framework.Input.Touch;
 using Microsoft.Xna.Framework.Media;
 using cocos2d;
 using WindowsPhoneGame2.Classes;
+using FlappyBird.Classes.Scenes;
 
 namespace FlappyBird
 {
@@ -84,8 +85,9 @@ namespace FlappyBird
         {
             // 允许游戏退出
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
-                //this.Exit();
-                CCDirector.sharedDirector().pause();
+            {
+                //CCDirector.sharedDirector().replaceScene(new GameScene());
+            }
 
             // TODO: 在此处添加更新逻辑
 

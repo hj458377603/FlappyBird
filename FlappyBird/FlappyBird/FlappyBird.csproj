@@ -60,6 +60,10 @@
     <Reference Include="cocos2d.Framework">
       <HintPath>..\..\..\libs\cocos2d.Framework.dll</HintPath>
     </Reference>
+    <Reference Include="CocosDenshion, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\libs\Windows Phone\CocosDenshion.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Xna.Framework" />
     <Reference Include="Microsoft.Xna.Framework.Game" />
     <Reference Include="Microsoft.Xna.Framework.Graphics" />
@@ -76,6 +80,8 @@
     <Compile Include="Classes\AppDelegate.cs" />
     <Compile Include="Classes\ContactListeners\BirdContactListener.cs" />
     <Compile Include="Classes\Scenes\GameScene.cs" />
+    <Compile Include="Classes\Scenes\LoadingScene.cs" />
+    <Compile Include="Classes\Scenes\StartScene.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <None Include="Properties\AppManifest.xml">
       <XnaPlatformSpecific>true</XnaPlatformSpecific>

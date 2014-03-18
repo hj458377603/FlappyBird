@@ -2,21 +2,20 @@ using Box2D.Collision.Shapes;
 using Box2D.Common;
 using Box2D.Dynamics;
 using cocos2d;
+using CocosDenshion;
 using FlappyBird.Classes.ContactListeners;
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using WindowsPhoneGame2.Classes;
 
 namespace FlappyBird.Classes.Scenes
 {
     class GameScene : CCScene, ICCTargetedTouchDelegate
     {
         #region 字段
-
-        // 屏幕的宽高
-        private CCSize screenSize = CCDirector.sharedDirector().getWinSize();
 
         // 屏幕与物理世界的大小的映射比例 
         // 具体可参考：http://blog.csdn.net/zhangxaochen/article/details/8009508
@@ -31,14 +30,27 @@ namespace FlappyBird.Classes.Scenes
         // 障碍物层
         private CCLayer barLayer;
 
-        // 得分文本
-        private CCLabelTTF scoreLabel;
-
         // 得分值
         private int score = 0;
 
         // 游戏主角bird是否还活着
         private bool isBirdAlive = true;
+
+        // 得分层
+        private CCLayer scoreLayer;
+
+        // 得分值
+        private List<CCSprite> digitSprites;
+
+        // 飞行速度
+        private float flySpeed = 3;
+
+        // 障碍物
+        private LinkedList<CCSprite> upBars;
+
+        // 障碍物产生时间间隔
+        private readonly float createBarInterval = 1.5f;
+
         #endregion
 
         #region 属性
@@ -55,18 +67,38 @@ namespace FlappyBird.Classes.Scenes
             world.AllowSleep = false;
             InitBack();
             AddBarLayer();
-            AddBar(0.5f);
             AddGround(0);
             AddBird();
             world.SetContactListener(new BirdContactListener(this, (CCSprite)(birdBody.UserData)));
             this.schedule(tick);
 
+            SimpleAudioEngine.sharedEngine().playBackgroundMusic(@"musics/background", true);
             InitScore();
         }
 
         #endregion
 
         #region 重写方法
+
+        /// <summary>
+        /// 进入
+        /// </summary>
+        public override void onEnter()
+        {
+            // 注册点击事件
+            CCTouchDispatcher.sharedDispatcher().addTargetedDelegate(this, 0, true);
+            base.onEnter();
+        }
+
+        /// <summary>
+        /// 离开
+        /// </summary>
+        public override void onExit()
+        {
+            // 移除点击事件
+            CCTouchDispatcher.sharedDispatcher().removeDelegate(this);
+            base.onExit();
+        }
 
         #endregion
 
@@ -79,7 +111,7 @@ namespace FlappyBird.Classes.Scenes
         {
             CCSprite back = CCSprite.spriteWithFile("imgs/back/back");
             back.anchorPoint = new CCPoint(0, 1);
-            back.position = new CCPoint(0, screenSize.height);
+            back.position = new CCPoint(0, AppDelegate.screenSize.height);
             this.addChild(back);
         }
 
@@ -92,6 +124,7 @@ namespace FlappyBird.Classes.Scenes
         {
             CCSprite bird = CCSprite.spriteWithFile("imgs/bird/bird_01");
             bird.rotation = -15;
+
             // bird飞行动作帧集合
             List<CCSpriteFrame> frames = new List<CCSpriteFrame>();
 
@@ -116,7 +149,7 @@ namespace FlappyBird.Classes.Scenes
             // 在物理世界中定义一个body，设置其位置，并让bird与之对应
             b2BodyDef ballBodyDef = new b2BodyDef();
             ballBodyDef.type = b2BodyType.b2_dynamicBody;
-            ballBodyDef.position = new b2Vec2(screenSize.width / PTM_RATIO / 2, (float)(screenSize.height / PTM_RATIO));
+            ballBodyDef.position = new b2Vec2(AppDelegate.screenSize.width / PTM_RATIO / 2, (float)(AppDelegate.screenSize.height / PTM_RATIO));
             ballBodyDef.userData = bird;
             birdBody = world.CreateBody(ballBodyDef);
 
@@ -167,7 +200,7 @@ namespace FlappyBird.Classes.Scenes
             // upBar
             CCSprite upBar = CCSprite.spriteWithFile("imgs/bar/up_bar");
             b2BodyDef upBarBodyDef = new b2BodyDef();
-            upBarBodyDef.position = new b2Vec2(screenSize.width / PTM_RATIO, (screenSize.height + offset + 80) / PTM_RATIO);
+            upBarBodyDef.position = new b2Vec2(AppDelegate.screenSize.width / PTM_RATIO, (AppDelegate.screenSize.height + offset + 80) / PTM_RATIO);
             upBarBodyDef.userData = upBar;
             upBarBodyDef.type = b2BodyType.b2_kinematicBody;
 
@@ -178,15 +211,28 @@ namespace FlappyBird.Classes.Scenes
             boxShapeDef.shape = upBarBox;
             upBarBox.SetAsBox(upBar.contentSize.width / PTM_RATIO / 2, upBar.contentSize.height / PTM_RATIO / 2);
 
-            upBarBody.LinearVelocity = new b2Vec2(-3, 0);
+            upBarBody.LinearVelocity = new b2Vec2(-flySpeed, 0);
             upBarBody.CreateFixture(boxShapeDef);
 
             barLayer.addChild(upBar);
 
+            if (upBars == null)
+            {
+                upBars = new LinkedList<CCSprite>();
+            }
+            if (upBars.Count == 0)
+            {
+                upBars.AddFirst(upBar);
+            }
+            else
+            {
+                upBars.AddAfter(upBars.Last, new LinkedListNode<CCSprite>(upBar));
+            }
+
             // downBar
             CCSprite downBar = CCSprite.spriteWithFile("imgs/bar/down_bar");
             b2BodyDef downBarBodyDef = new b2BodyDef();
-            downBarBodyDef.position = new b2Vec2(screenSize.width / PTM_RATIO, (downBar.contentSize.height + offset * 2 - 80) / 2 / PTM_RATIO);
+            downBarBodyDef.position = new b2Vec2(AppDelegate.screenSize.width / PTM_RATIO, (downBar.contentSize.height + offset * 2 - 80) / 2 / PTM_RATIO);
             downBarBodyDef.userData = downBar;
             downBarBodyDef.type = b2BodyType.b2_kinematicBody;
 
@@ -197,14 +243,9 @@ namespace FlappyBird.Classes.Scenes
             shapeDef.shape = downBarBox;
             downBarBox.SetAsBox(downBar.contentSize.width / PTM_RATIO / 2, downBar.contentSize.height / PTM_RATIO / 2);
 
-            downBarBody.LinearVelocity = new b2Vec2(-3, 0);
+            downBarBody.LinearVelocity = new b2Vec2(-flySpeed, 0);
             downBarBody.CreateFixture(shapeDef);
             barLayer.addChild(downBar);
-
-            if (scoreLabel != null)
-            {
-                scoreLabel.setString(score++.ToString());
-            }
         }
 
         /// <summary>
@@ -215,7 +256,8 @@ namespace FlappyBird.Classes.Scenes
             barLayer = new CCLayer();
             this.addChild(barLayer);
 
-            CCScheduler.sharedScheduler().scheduleSelector(AddBar, this, 2f, true);
+            // 定时创建障碍物
+            CCScheduler.sharedScheduler().scheduleSelector(AddBar, this, createBarInterval, true);
         }
 
         /// <summary>
@@ -223,12 +265,43 @@ namespace FlappyBird.Classes.Scenes
         /// </summary>
         private void InitScore()
         {
-            scoreLabel = CCLabelTTF.labelWithString(score.ToString(), "Arial", 20);
-            scoreLabel.Color = new ccColor3B(Color.Red);
-            scoreLabel.position = new CCPoint(screenSize.width - 20, screenSize.height - 20);
-            CCLayer scoreLayer = new CCLayer();
-            scoreLayer.addChild(scoreLabel);
+            scoreLayer = new CCLayer();
+            scoreLayer.position = new CCPoint(50, AppDelegate.screenSize.height - 50);
             this.addChild(scoreLayer);
+            UpdateScore(score);
+        }
+
+        /// <summary>
+        /// 更新得分
+        /// </summary>
+        /// <param name="score"></param>
+        private void UpdateScore(int score)
+        {
+            string scoreStr = score.ToString();
+
+            if (digitSprites == null)
+            {
+                digitSprites = new List<CCSprite>();
+            }
+
+            if (digitSprites.Count < scoreStr.Length)
+            {
+                var tempDigit = CCSprite.spriteWithFile("imgs/score/" + scoreStr[0]);
+                tempDigit.position = new CCPoint(20 * (scoreStr.Length - 1), 0);
+                digitSprites.Add(tempDigit);
+                scoreLayer.addChild(tempDigit);
+            }
+
+            // 更新
+            for (int i = 0; i < scoreStr.Length; i++)
+            {
+                digitSprites[i].Texture = CCTextureCache.sharedTextureCache().addImage("imgs/score/" + scoreStr[i]);
+            }
+
+            if (score > 0)
+            {
+                SimpleAudioEngine.sharedEngine().playEffect(@"musics/sfx_point");
+            }
         }
 
         /// <summary>
@@ -245,9 +318,7 @@ namespace FlappyBird.Classes.Scenes
                 {
                     CCSprite sprite = (CCSprite)b.UserData;
                     sprite.position = new CCPoint((float)(b.Position.x * PTM_RATIO),
-                                                    (float)(b.Position.y * PTM_RATIO));
-
-                    //sprite.rotation = -1 * MathHelper.ToDegrees(b.Angle);
+                                                  (float)(b.Position.y * PTM_RATIO));
 
                     if (birdBody.UserData == sprite && sprite.rotation < 90)
                     {
@@ -270,45 +341,47 @@ namespace FlappyBird.Classes.Scenes
 
                 }
             }
+
+            // 障碍物链表中第一个节点通过则加分
+            if (upBars != null && upBars.First != null && (float)upBars.First().position.x / PTM_RATIO < AppDelegate.screenSize.width / 2f / PTM_RATIO)
+            {
+                UpdateScore(++score);
+                upBars.RemoveFirst();
+            }
         }
 
-        public override void onEnter()
-        {
-            // 注册点击事件
-            CCTouchDispatcher.sharedDispatcher().addTargetedDelegate(this, 0, true);
-            base.onEnter();
-        }
-
-        public override void onExit()
-        {
-            // 移除点击事件
-            CCTouchDispatcher.sharedDispatcher().removeDelegate(this);
-            base.onExit();
-        }
-
+        /// <summary>
+        /// 点击开始
+        /// </summary>
+        /// <param name="pTouch"></param>
+        /// <param name="pEvent"></param>
+        /// <returns></returns>
         public bool ccTouchBegan(CCTouch pTouch, CCEvent pEvent)
         {
             if (isBirdAlive)
             {
-                birdBody.LinearVelocity = new b2Vec2(0, 10);
+                birdBody.LinearVelocity = new b2Vec2(0, 8);
                 ((CCSprite)(birdBody.UserData)).rotation = -30;
+                SimpleAudioEngine.sharedEngine().playEffect(@"musics/sfx_wing");
+            }
+            else
+            {
+                var scene = CCTransitionFade.transitionWithDuration(0.5f, new GameScene());
+                CCDirector.sharedDirector().pushScene(scene);
             }
             return true;
         }
 
         public void ccTouchCancelled(CCTouch pTouch, CCEvent pEvent)
         {
-            //throw new NotImplementedException();
         }
 
         public void ccTouchEnded(CCTouch pTouch, CCEvent pEvent)
         {
-            //throw new NotImplementedException();
         }
 
         public void ccTouchMoved(CCTouch pTouch, CCEvent pEvent)
         {
-            //throw new NotImplementedException();
         }
 
         /// <summary>
@@ -316,15 +389,32 @@ namespace FlappyBird.Classes.Scenes
         /// </summary>
         public void GameOver()
         {
+            SimpleAudioEngine.sharedEngine().stopBackgroundMusic(true);
             isBirdAlive = false;
+
+            CCScheduler.sharedScheduler().unscheduleSelector(AddBar, this);
             var bird = (CCSprite)birdBody.UserData;
             CCMoveTo moveTo = CCMoveTo.actionWithDuration(0.5f, new CCPoint(bird.position.x, 120));
             CCRotateTo rotateTo = CCRotateTo.actionWithDuration(0.1f, 90);
             bird.runAction(moveTo);
             bird.runAction(rotateTo);
             bird.stopActionByTag(0);
-            CCScheduler.sharedScheduler().unscheduleSelector(AddBar, this);
+
+            if (bird.position.y > 130)
+            {
+                // 延迟0.2秒播放降落音效
+                var tempAction = CCSequence.actions(CCDelayTime.actionWithDuration(0.2f), CCCallFunc.actionWithTarget(this, FallingDown));
+                this.runAction(tempAction);
+            }
             this.unschedule(tick);
+        }
+
+        /// <summary>
+        /// 降落
+        /// </summary>
+        private void FallingDown()
+        {
+            SimpleAudioEngine.sharedEngine().playEffect(@"musics/sfx_die");
         }
         #endregion
     }
