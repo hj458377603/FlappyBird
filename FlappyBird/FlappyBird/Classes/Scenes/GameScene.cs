@@ -7,6 +7,8 @@ using FlappyBird.Classes.ContactListeners;
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.IsolatedStorage;
 using System.Linq;
 using System.Text;
 using WindowsPhoneGame2.Classes;
@@ -16,6 +18,7 @@ namespace FlappyBird.Classes.Scenes
     class GameScene : CCScene, ICCTargetedTouchDelegate
     {
         #region 字段
+        private Game game;
 
         // 屏幕与物理世界的大小的映射比例 
         // 具体可参考：http://blog.csdn.net/zhangxaochen/article/details/8009508
@@ -30,14 +33,14 @@ namespace FlappyBird.Classes.Scenes
         // 障碍物层
         private CCLayer barLayer;
 
+        // 得分层
+        private CCLayer scoreLayer;
+
         // 得分值
         private int score = 0;
 
         // 游戏主角bird是否还活着
         private bool isBirdAlive = true;
-
-        // 得分层
-        private CCLayer scoreLayer;
 
         // 得分值
         private List<CCSprite> digitSprites;
@@ -46,10 +49,18 @@ namespace FlappyBird.Classes.Scenes
         private float flySpeed = 3;
 
         // 障碍物
-        private LinkedList<CCSprite> upBars;
+        private Queue<CCSprite> upBars;
 
         // 障碍物产生时间间隔
         private readonly float createBarInterval = 1.5f;
+
+        // 地面
+        private CCSprite ground;
+
+        // 游戏结束弹出的Layer
+        private CCLayer gameOverLayer;
+
+        private int highestScore;
 
         #endregion
 
@@ -59,15 +70,16 @@ namespace FlappyBird.Classes.Scenes
 
         #region 构造方法
 
-        public GameScene()
+        public GameScene(Game game)
         {
+            this.game = game;
             // 初始化world
             b2Vec2 gravity = new b2Vec2(0f, -20f);
             world = new b2World(gravity);
             world.AllowSleep = false;
             InitBack();
             AddBarLayer();
-            AddGround(0);
+            AddGround();
             AddBird();
             world.SetContactListener(new BirdContactListener(this, (CCSprite)(birdBody.UserData)));
             this.schedule(tick);
@@ -170,21 +182,30 @@ namespace FlappyBird.Classes.Scenes
         /// 第一步添加地面
         /// 第二步利用box-2d物理引擎将地面作为静态物体添加到物理世界中
         /// </summary>
-        private void AddGround(float interval)
+        private void AddGround()
         {
-            CCSprite ground = CCSprite.spriteWithFile("imgs/ground/ground_01");
+            ground = CCSprite.spriteWithFile("imgs/ground/ground");
+            ground.position = new CCPoint(ground.contentSize.width / 2, ground.contentSize.height / 2);
 
             b2BodyDef groundBodyDef = new b2BodyDef();
             groundBodyDef.position = new b2Vec2(ground.contentSize.width / PTM_RATIO / 2, ground.contentSize.height / PTM_RATIO / 2);
             groundBodyDef.userData = ground;
-            groundBodyDef.type = b2BodyType.b2_kinematicBody;
+            groundBodyDef.type = b2BodyType.b2_staticBody;
+
+            // 计算ground的运动，使其速度与bird的飞行速度一致
+            var action1 = CCMoveTo.actionWithDuration(ground.contentSize.width / (4 * PTM_RATIO * flySpeed),
+                                                      new CCPoint(ground.contentSize.width / 4, ground.position.y));
+            var action2 = CCMoveTo.actionWithDuration(0, new CCPoint(ground.contentSize.width / 2, ground.position.y));
+            var action = CCSequence.actionOneTwo(action1, action2);
+            var repeatAction = CCRepeatForever.actionWithAction(action);
+            repeatAction.tag = 0;
+            ground.runAction(repeatAction);
 
             b2Body groundBody = world.CreateBody(groundBodyDef);
             b2PolygonShape groundBox = new b2PolygonShape();
             b2FixtureDef boxShapeDef = new b2FixtureDef();
             boxShapeDef.shape = groundBox;
             groundBox.SetAsBox(ground.contentSize.width / PTM_RATIO / 2, ground.contentSize.height / PTM_RATIO / 2);
-
             groundBody.CreateFixture(boxShapeDef);
             this.addChild(ground);
         }
@@ -218,16 +239,11 @@ namespace FlappyBird.Classes.Scenes
 
             if (upBars == null)
             {
-                upBars = new LinkedList<CCSprite>();
+                upBars = new Queue<CCSprite>();
             }
-            if (upBars.Count == 0)
-            {
-                upBars.AddFirst(upBar);
-            }
-            else
-            {
-                upBars.AddAfter(upBars.Last, new LinkedListNode<CCSprite>(upBar));
-            }
+
+            // 将新产生的对象加入到队列中
+            upBars.Enqueue(upBar);
 
             // downBar
             CCSprite downBar = CCSprite.spriteWithFile("imgs/bar/down_bar");
@@ -268,26 +284,26 @@ namespace FlappyBird.Classes.Scenes
             scoreLayer = new CCLayer();
             scoreLayer.position = new CCPoint(50, AppDelegate.screenSize.height - 50);
             this.addChild(scoreLayer);
-            UpdateScore(score);
+
+            if (digitSprites == null)
+            {
+                digitSprites = new List<CCSprite>();
+            }
+            UpdateScore(digitSprites, scoreLayer, score, true);
         }
 
         /// <summary>
         /// 更新得分
         /// </summary>
         /// <param name="score"></param>
-        private void UpdateScore(int score)
+        private void UpdateScore(List<CCSprite> digitSprites, CCLayer scoreLayer, int score, bool playSound)
         {
             string scoreStr = score.ToString();
 
-            if (digitSprites == null)
+            for (int i = digitSprites.Count; digitSprites.Count < scoreStr.Length; i++)
             {
-                digitSprites = new List<CCSprite>();
-            }
-
-            if (digitSprites.Count < scoreStr.Length)
-            {
-                var tempDigit = CCSprite.spriteWithFile("imgs/score/" + scoreStr[0]);
-                tempDigit.position = new CCPoint(20 * (scoreStr.Length - 1), 0);
+                var tempDigit = CCSprite.spriteWithFile("imgs/score/" + scoreStr[i]);
+                tempDigit.position = new CCPoint(i * tempDigit.contentSize.width, 0);
                 digitSprites.Add(tempDigit);
                 scoreLayer.addChild(tempDigit);
             }
@@ -298,7 +314,7 @@ namespace FlappyBird.Classes.Scenes
                 digitSprites[i].Texture = CCTextureCache.sharedTextureCache().addImage("imgs/score/" + scoreStr[i]);
             }
 
-            if (score > 0)
+            if (playSound && score > 0)
             {
                 SimpleAudioEngine.sharedEngine().playEffect(@"musics/sfx_point");
             }
@@ -317,8 +333,12 @@ namespace FlappyBird.Classes.Scenes
                 if (b.UserData != null)
                 {
                     CCSprite sprite = (CCSprite)b.UserData;
-                    sprite.position = new CCPoint((float)(b.Position.x * PTM_RATIO),
-                                                  (float)(b.Position.y * PTM_RATIO));
+
+                    if (b.BodyType != b2BodyType.b2_staticBody)
+                    {
+                        sprite.position = new CCPoint((float)(b.Position.x * PTM_RATIO),
+                                                      (float)(b.Position.y * PTM_RATIO));
+                    }
 
                     if (birdBody.UserData == sprite && sprite.rotation < 90)
                     {
@@ -343,10 +363,10 @@ namespace FlappyBird.Classes.Scenes
             }
 
             // 障碍物链表中第一个节点通过则加分
-            if (upBars != null && upBars.First != null && (float)upBars.First().position.x / PTM_RATIO < AppDelegate.screenSize.width / 2f / PTM_RATIO)
+            if (upBars != null && upBars.Count > 0 && (float)upBars.First().position.x / PTM_RATIO < AppDelegate.screenSize.width / 2f / PTM_RATIO)
             {
-                UpdateScore(++score);
-                upBars.RemoveFirst();
+                UpdateScore(digitSprites, scoreLayer, ++score, true);
+                upBars.Dequeue();
             }
         }
 
@@ -358,16 +378,11 @@ namespace FlappyBird.Classes.Scenes
         /// <returns></returns>
         public bool ccTouchBegan(CCTouch pTouch, CCEvent pEvent)
         {
-            if (isBirdAlive)
+            if (isBirdAlive && birdBody.Position.y < AppDelegate.screenSize.height / PTM_RATIO)
             {
                 birdBody.LinearVelocity = new b2Vec2(0, 8);
                 ((CCSprite)(birdBody.UserData)).rotation = -30;
                 SimpleAudioEngine.sharedEngine().playEffect(@"musics/sfx_wing");
-            }
-            else
-            {
-                var scene = CCTransitionFade.transitionWithDuration(0.5f, new GameScene());
-                CCDirector.sharedDirector().pushScene(scene);
             }
             return true;
         }
@@ -399,6 +414,7 @@ namespace FlappyBird.Classes.Scenes
             bird.runAction(moveTo);
             bird.runAction(rotateTo);
             bird.stopActionByTag(0);
+            ground.stopActionByTag(0);
 
             if (bird.position.y > 130)
             {
@@ -407,6 +423,7 @@ namespace FlappyBird.Classes.Scenes
                 this.runAction(tempAction);
             }
             this.unschedule(tick);
+            ShowGameOverMenu();
         }
 
         /// <summary>
@@ -416,6 +433,112 @@ namespace FlappyBird.Classes.Scenes
         {
             SimpleAudioEngine.sharedEngine().playEffect(@"musics/sfx_die");
         }
+
+        /// <summary>
+        /// 游戏结束弹出菜单
+        /// </summary>
+        private void ShowGameOverMenu()
+        {
+            if (gameOverLayer == null)
+            {
+                gameOverLayer = new CCLayer();
+            }
+
+            // gameOver文字图片
+            CCSprite gameOverImageSprite = CCSprite.spriteWithFile("imgs/start/gameOver");
+            gameOverImageSprite.position = new CCPoint(AppDelegate.screenSize.width / 2, AppDelegate.screenSize.height * 4 / 5);
+            gameOverLayer.addChild(gameOverImageSprite);
+
+            // 得分Panel图片
+            CCSprite scorePanel = CCSprite.spriteWithFile("imgs/start/scorePanel");
+            scorePanel.position = new CCPoint(AppDelegate.screenSize.width / 2, AppDelegate.screenSize.height * 3 / 5);
+            gameOverLayer.addChild(scorePanel);
+
+            // 得分
+            CCLayer currentScoreLayer = new CCLayer();
+            List<CCSprite> digitSpriteList = new List<CCSprite>();
+            currentScoreLayer.scale = 0.5f;
+            currentScoreLayer.position = new CCPoint(AppDelegate.screenSize.width / 2 + 60, AppDelegate.screenSize.height * 3 / 5 + 15);
+            this.addChild(currentScoreLayer);
+            UpdateScore(digitSpriteList, currentScoreLayer, score, false);
+            gameOverLayer.addChild(currentScoreLayer);
+
+            // 最高分
+            using (IsolatedStorageFileStream stream = IsolatedStorageFile.GetUserStoreForApplication().OpenFile("/score.data", System.IO.FileMode.OpenOrCreate, FileAccess.ReadWrite))
+            {
+                StreamReader reader = new StreamReader(stream);
+
+                string res = reader.ReadToEnd();
+                if (!string.IsNullOrEmpty(res))
+                {
+                    highestScore = Convert.ToInt32(res);
+                }
+
+                if (!IsolatedStorageFile.GetUserStoreForApplication().FileExists("score.data"))
+                {
+                    IsolatedStorageFile.GetUserStoreForApplication().CreateFile("score.data");
+                }
+            }
+            using (IsolatedStorageFileStream stream = IsolatedStorageFile.GetUserStoreForApplication().OpenFile("/score.data", System.IO.FileMode.OpenOrCreate, FileAccess.ReadWrite))
+            {
+                if (score > highestScore)
+                {
+                    highestScore = score;
+                    byte[] buffer = UTF8Encoding.UTF8.GetBytes(highestScore.ToString());
+                    stream.Write(buffer, 0, buffer.Length);
+                    stream.Flush();
+                    stream.Close();
+                    stream.Dispose();
+
+                    CCSprite newHighScore = CCSprite.spriteWithFile("imgs/start/new");
+                    newHighScore.position = new CCPoint(AppDelegate.screenSize.width / 2 + 35, AppDelegate.screenSize.height * 3 / 5 - 8);
+                    gameOverLayer.addChild(newHighScore);
+                }
+            }
+            CCLayer highestScoreLayer = new CCLayer();
+            List<CCSprite> highestScoreDigitSpriteList = new List<CCSprite>();
+            highestScoreLayer.scale = 0.5f;
+            highestScoreLayer.position = new CCPoint(AppDelegate.screenSize.width / 2 + 60, AppDelegate.screenSize.height * 3 / 5 - 30);
+            this.addChild(highestScoreLayer);
+            UpdateScore(highestScoreDigitSpriteList, highestScoreLayer, highestScore, false);
+            gameOverLayer.addChild(highestScoreLayer);
+
+
+            #region 按钮
+
+            // 开始按钮
+            CCSprite btnStart = CCSprite.spriteWithFile("imgs/start/btn_start");
+            CCSprite btn_startSelected = CCSprite.spriteWithFile("imgs/start/btn_startSelected");
+
+            CCMenuItemSprite menuItemSprite1 = CCMenuItemSprite.itemFromNormalSprite(btnStart, btn_startSelected, this, (sender) =>
+            {
+                GameScene gameScene = new GameScene(game);
+
+                // 跳转到下一个场景
+                var scene = CCTransitionFade.transitionWithDuration(0.5f, gameScene);
+                CCDirector.sharedDirector().pushScene(scene);
+            });
+
+            // 排行榜
+            CCSprite btnHighScore = CCSprite.spriteWithFile("imgs/start/btn_highScore");
+
+            CCSprite btnHighScoreSelected = CCSprite.spriteWithFile("imgs/start/btn_highScoreSelected");
+            CCMenuItemSprite menuItemSprite2 = CCMenuItemSprite.itemFromNormalSprite(btnHighScore, btnHighScoreSelected, this, (sender) =>
+            {
+                game.Exit();
+            });
+
+            CCMenu menu = CCMenu.menuWithItems(menuItemSprite1, menuItemSprite2);
+            menu.position = new CCPoint(AppDelegate.screenSize.width / 2, ground.contentSize.height + btnStart.contentSize.height / 2);
+
+            //菜单水平排列
+            menu.alignItemsHorizontallyWithPadding(20);
+            this.addChild(menu);
+            #endregion
+
+            this.addChild(gameOverLayer);
+        }
+
         #endregion
     }
 }

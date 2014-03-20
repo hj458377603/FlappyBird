@@ -47,13 +47,13 @@ namespace WindowsPhoneGame2.Classes
             // set FPS. the default value is 1.0/60 if you don't call this
             pDirector.animationInterval = 1.0 / 60;
 
+            screenSize = CCDirector.sharedDirector().getWinSize();
+
             // create a scene. it's an autorelease object
-            CCScene loadScene = new LoadingScene();
+            CCScene loadScene = new StartScene(game);
 
             //run
             pDirector.runWithScene(loadScene);
-
-            screenSize = CCDirector.sharedDirector().getWinSize();
             return true;
         }
 

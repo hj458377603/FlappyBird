@@ -1,4 +1,6 @@
 ﻿using cocos2d;
+using CocosDenshion;
+using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,15 +11,20 @@ namespace FlappyBird.Classes.Scenes
 {
     class StartScene : CCScene
     {
-        public StartScene()
+        private Game game;
+        private bool isLoaded = false;
+
+        public StartScene(Game game)
         {
+            this.game = game;
+            LoadMusics();
             InitBackGround();
         }
 
         private void InitBackGround()
         {
             #region 地面
-            CCSprite ground = CCSprite.spriteWithFile("imgs/ground/ground_01");
+            CCSprite ground = CCSprite.spriteWithFile("imgs/ground/ground");
             ground.position = new CCPoint(AppDelegate.screenSize.width / 2, ground.contentSize.height / 2);
             this.addChild(ground);
             #endregion
@@ -64,21 +71,27 @@ namespace FlappyBird.Classes.Scenes
             #region 按钮
             // 开始按钮
             CCSprite btnStart = CCSprite.spriteWithFile("imgs/start/btn_start");
-            CCMenuItemSprite menuItemSprite1 = CCMenuItemSprite.itemFromNormalSprite(btnStart, null, this, (sender) =>
-            {
-                GameScene gameScene = new GameScene();
+            CCSprite btn_startSelected = CCSprite.spriteWithFile("imgs/start/btn_startSelected");
 
-                // 跳转到下一个场景
-                //var scene = CCTransitionMoveInR.transitionWithDuration(0.1f, gameScene);
-                var scene = CCTransitionFade.transitionWithDuration(0.5f, gameScene);
-                CCDirector.sharedDirector().pushScene(scene);
+            CCMenuItemSprite menuItemSprite1 = CCMenuItemSprite.itemFromNormalSprite(btnStart, btn_startSelected, this, (sender) =>
+            {
+                if (isLoaded)
+                {
+                    GameScene gameScene = new GameScene(game);
+
+                    // 跳转到下一个场景
+                    var scene = CCTransitionFade.transitionWithDuration(0.5f, gameScene);
+                    CCDirector.sharedDirector().pushScene(scene);
+                }
             });
 
             // 排行榜
             CCSprite btnHighScore = CCSprite.spriteWithFile("imgs/start/btn_highScore");
-            CCMenuItemSprite menuItemSprite2 = CCMenuItemSprite.itemFromNormalSprite(btnHighScore, null, this, (sender) =>
-            {
 
+            CCSprite btnHighScoreSelected = CCSprite.spriteWithFile("imgs/start/btn_highScoreSelected");
+            CCMenuItemSprite menuItemSprite2 = CCMenuItemSprite.itemFromNormalSprite(btnHighScore, btnHighScoreSelected, this, (sender) =>
+            {
+                game.Exit();
             });
 
             CCMenu menu = CCMenu.menuWithItems(menuItemSprite1, menuItemSprite2);
@@ -88,6 +101,21 @@ namespace FlappyBird.Classes.Scenes
             menu.alignItemsHorizontallyWithPadding(48);
             this.addChild(menu);
             #endregion
+        }
+
+        /// <summary>
+        /// 加载音乐文件
+        /// </summary>
+        private void LoadMusics()
+        {
+            SimpleAudioEngine.sharedEngine().preloadBackgroundMusic(@"musics/background");
+
+            SimpleAudioEngine.sharedEngine().preloadEffect(@"musics/sfx_wing");
+            SimpleAudioEngine.sharedEngine().preloadEffect(@"musics/sfx_hit");
+            SimpleAudioEngine.sharedEngine().preloadEffect(@"musics/sfx_die");
+            SimpleAudioEngine.sharedEngine().preloadEffect(@"musics/sfx_point");
+
+            isLoaded = true;
         }
     }
 }
