@@ -22,6 +22,7 @@ namespace FlappyBird
     {
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
+        CCApplication application;
 
         public Game1()
         {
@@ -38,7 +39,8 @@ namespace FlappyBird
             // 延长锁定时的电池寿命。
             InactiveSleepTime = TimeSpan.FromSeconds(1);
 
-            CCApplication application = new AppDelegate(this, graphics);
+            application = new AppDelegate(this, graphics);
+
             this.Components.Add(application);
         }
 
@@ -105,6 +107,16 @@ namespace FlappyBird
             // TODO: 在此处添加绘图代码
 
             base.Draw(gameTime);
+        }
+
+        protected override void OnDeactivated(object sender, EventArgs args)
+        {
+            application.applicationDidEnterBackground();
+        }
+
+        protected override void OnActivated(object sender, EventArgs args)
+        {
+            application.applicationWillEnterForeground();
         }
     }
 }

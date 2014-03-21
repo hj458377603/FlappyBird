@@ -62,9 +62,7 @@ namespace FlappyBird.Classes.Scenes
 
         private int highestScore;
 
-        #endregion
-
-        #region 属性
+        private CCRepeat flyRepeatAction;
 
         #endregion
 
@@ -154,9 +152,9 @@ namespace FlappyBird.Classes.Scenes
             // 飞行动画
             CCAnimation marmotShowanimation = CCAnimation.animationWithFrames(frames, 0.1f);
             CCAnimate flyAction = CCAnimate.actionWithAnimation(marmotShowanimation, false);
-            CCRepeatForever repeatAction = CCRepeatForever.actionWithAction(flyAction);
-            repeatAction.tag = 0;
-            bird.runAction(repeatAction);
+            flyRepeatAction = CCRepeat.actionWithAction(flyAction, 2);
+            flyRepeatAction.tag = 0;
+            bird.runAction(flyRepeatAction);
 
             // 在物理世界中定义一个body，设置其位置，并让bird与之对应
             b2BodyDef ballBodyDef = new b2BodyDef();
@@ -190,6 +188,8 @@ namespace FlappyBird.Classes.Scenes
             b2BodyDef groundBodyDef = new b2BodyDef();
             groundBodyDef.position = new b2Vec2(ground.contentSize.width / PTM_RATIO / 2, ground.contentSize.height / PTM_RATIO / 2);
             groundBodyDef.userData = ground;
+
+            // 不受重力影响，不能运动
             groundBodyDef.type = b2BodyType.b2_staticBody;
 
             // 计算ground的运动，使其速度与bird的飞行速度一致
@@ -223,6 +223,8 @@ namespace FlappyBird.Classes.Scenes
             b2BodyDef upBarBodyDef = new b2BodyDef();
             upBarBodyDef.position = new b2Vec2(AppDelegate.screenSize.width / PTM_RATIO, (AppDelegate.screenSize.height + offset + 80) / PTM_RATIO);
             upBarBodyDef.userData = upBar;
+
+            // 不受重力影响，可以有速度
             upBarBodyDef.type = b2BodyType.b2_kinematicBody;
 
             b2Body upBarBody = world.CreateBody(upBarBodyDef);
@@ -382,6 +384,11 @@ namespace FlappyBird.Classes.Scenes
             {
                 birdBody.LinearVelocity = new b2Vec2(0, 8);
                 ((CCSprite)(birdBody.UserData)).rotation = -30;
+                if (!flyRepeatAction.isDone())
+                {
+                    ((CCSprite)(birdBody.UserData)).stopActionByTag(0);
+                }
+                ((CCSprite)(birdBody.UserData)).runAction(flyRepeatAction);
                 SimpleAudioEngine.sharedEngine().playEffect(@"musics/sfx_wing");
             }
             return true;

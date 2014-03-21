@@ -14,7 +14,6 @@ namespace FlappyBird.Classes.ContactListeners
 
         #endregion
 
-
         #region 构造方法
 
         public BirdContactListener(CCScene scene, CCNode bird)

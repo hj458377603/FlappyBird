@@ -26,6 +26,7 @@
     </SupportedCultures>
     <ApplicationIcon>Game.ico</ApplicationIcon>
     <Thumbnail>ico62.png</Thumbnail>
+    <GameStartupType>FlappyBird.Game1</GameStartupType>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|Windows Phone' ">
     <DebugSymbols>true</DebugSymbols>

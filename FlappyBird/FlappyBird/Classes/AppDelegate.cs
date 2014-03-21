@@ -1,4 +1,5 @@
 using cocos2d;
+using CocosDenshion;
 using FlappyBird.Classes.Scenes;
 using Microsoft.Xna.Framework;
 
@@ -65,7 +66,7 @@ namespace WindowsPhoneGame2.Classes
             CCDirector.sharedDirector().pause();
 
             // if you use SimpleAudioEngine, it must be pause
-            // SimpleAudioEngine::sharedEngine()->pauseBackgroundMusic();
+            SimpleAudioEngine.sharedEngine().pauseBackgroundMusic();
         }
 
         /// <summary>
@@ -76,7 +77,7 @@ namespace WindowsPhoneGame2.Classes
             CCDirector.sharedDirector().resume();
 
             // if you use SimpleAudioEngine, it must resume here
-            // SimpleAudioEngine::sharedEngine()->resumeBackgroundMusic();
+            SimpleAudioEngine.sharedEngine().resumeBackgroundMusic();
         }
     }
 }
