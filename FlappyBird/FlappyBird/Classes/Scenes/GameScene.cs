@@ -77,13 +77,14 @@ namespace FlappyBird.Classes.Scenes
             world.AllowSleep = false;
             InitBack();
             AddBarLayer();
+
+            InitScore();
             AddGround();
             AddBird();
             world.SetContactListener(new BirdContactListener(this, (CCSprite)(birdBody.UserData)));
             this.schedule(tick);
 
             SimpleAudioEngine.sharedEngine().playBackgroundMusic(@"musics/background", true);
-            InitScore();
         }
 
         #endregion
@@ -170,7 +171,6 @@ namespace FlappyBird.Classes.Scenes
             fixtureDef.shape = shape;
             fixtureDef.density = 500.0f;
             fixtureDef.friction = 0.5f;
-            fixtureDef.restitution = 0.1f;
             birdBody.CreateFixture(fixtureDef);
 
             this.addChild(bird);

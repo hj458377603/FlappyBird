@@ -24,6 +24,7 @@ Content\imgs\start\btn_startSelected.xnb
 Content\imgs\start\gameOver.xnb
 Content\imgs\start\scorePanel.xnb
 Content\imgs\start\new.xnb
+Content\imgs\start\bg.xnb
 Content\fonts\Arial.xnb
 Content\musics\sfx_die.xnb
 Content\musics\sfx_hit.xnb
@@ -31,5 +32,4 @@ Content\musics\sfx_swooshing.xnb
 Content\musics\sfx_wing.xnb
 Content\musics\sfx_point.xnb
 Content\musics\background.xnb
-Content\imgs\start\bg.xnb
 Content\musics\background.wma
